@@ -122,7 +122,7 @@ df_out_list = []
 df_in_list = []
 errors = []
 
-# … (Streamlit 상단, 업로드 등 생략) …
+# … (상단 생략) …
 
 for uploaded_file in uploaded_files:
     try:
@@ -131,29 +131,47 @@ for uploaded_file in uploaded_files:
         errors.append(f"파일 읽기 실패: {uploaded_file.name} ({e})")
         continue
 
-    df.columns = df.columns.str.strip()  # 헤더 공백 제거
+    # 헤더 공백 제거
+    df.columns = df.columns.str.strip()
 
-    # 출고 파일 판별
+    # 디버깅용: 컬럼 리스트 확인 (필요 시)
+    st.write(f"--- {uploaded_file.name}의 컬럼 리스트 ---")
+    st.write(df.columns.tolist())
+
+    # --- 출고/입고 판별 ---
     is_out_file = '출고일' in df.columns
-    # 입고 파일 판별
     is_in_file = '입고일' in df.columns
 
     if is_out_file:
-        # --- 출고 처리 ---
+        # 출고 파일 처리 (기존 로직과 동일, 생략)
         df_filtered = df[df['구분'].isin(["정상출고", "(-)조정"])].copy()
-        df_filtered = df_filtered[column_group_out]  # column_group_out 중 실제 존재하는 것만 우선 가져옴
-        df_filtered['출고일'] = pd.to_datetime(
-            df_filtered['출고일'], errors='coerce'
+        # … (생략) …
+        df_out_list.append(df_filtered)
+
+    elif is_in_file:
+        # 입고 파일 처리: 실제 존재하는 컬럼만 골라서 가져오기
+        existing_in_cols = [col for col in column_group_in if col in df.columns]
+        df_filtered = df[existing_in_cols].copy()
+        df_filtered['입고일'] = pd.to_datetime(
+            df_filtered['입고일'], errors='coerce'
         ).dt.strftime('%Y-%m-%d')
 
-        # '분류제안', '분류확정' 열 추가
+        # 빈 컬럼 채우기
+        for col in column_group_in:
+            if col not in df_filtered.columns:
+                df_filtered[col] = ""
+
         df_filtered.insert(0, '분류제안', '')
         df_filtered.insert(1, '분류확정', '')
 
-        # 부족한 column_group_out 열을 빈 문자열로 채우기
-        for col in column_group_out:
-            if col not in df_filtered.columns:
-                df_filtered[col] = ""
+        # 컬럼명 재매핑
+        rename_dict = {
+            "입고일": "출고일", 
+            "공급처": "판매처", 
+            "가용입고수량": "가용출고수량", 
+            "옵션명": "판매처옵션명"
+        }
+        df_filtered.rename(columns=rename_dict, inplace=True)
 
         # 분류 함수 적용
         df_filtered['분류제안'] = df_filtered.apply(
@@ -163,55 +181,13 @@ for uploaded_file in uploaded_files:
 
         # 최종 컬럼 순서 맞추기
         df_filtered = df_filtered[['분류제안', '분류확정'] + column_group_out]
-        df_out_list.append(df_filtered)
-
-    elif is_in_file:
-        # --- 입고 처리 ---
-        df_filtered = df[df['구분'].isin(["반품입고", "정상입고", "(+)조정"])].copy()
-        df_filtered = df_filtered[column_group_in]  # column_group_in 중 실제 존재하는 것만 우선 가져옴
-        df_filtered['입고일'] = pd.to_datetime(
-            df_filtered['입고일'], errors='coerce'
-        ).dt.strftime('%Y-%m-%d')
-
-        # '분류제안', '분류확정' 열 추가
-        df_filtered.insert(0, '분류제안', '')
-        df_filtered.insert(1, '분류확정', '')
-
-        # 부족한 column_group_in 열을 빈 문자열로 채우기
-        for col in column_group_in:
-            if col not in df_filtered.columns:
-                df_filtered[col] = ""
-
-        # 컬럼명 재매핑 (입고 → 출고 형식으로 통일)
-        rename_dict = {
-            "입고일": "출고일",
-            "공급처": "판매처",
-            "가용입고수량": "가용출고수량",
-            "옵션명": "판매처옵션명"
-        }
-        df_filtered.rename(columns=rename_dict, inplace=True)
-
-        # 이제 column_group_out 기준으로 “부족한 열”을 빈 문자열로 채우기
-        for col in column_group_out:
-            if col not in df_filtered.columns:
-                df_filtered[col] = ""
-
-        # 분류 함수 적용
-        df_filtered['분류제안'] = df_filtered.apply(
-            lambda row: classify(row, market_sales_list), axis=1
-        )
-        df_filtered = df_filtered[df_filtered['분류제안'].notna()]
-
-        # 최종 컬럼 순서 맞추기: '분류제안', '분류확정' + column_group_out
-        df_filtered = df_filtered[['분류제안', '분류확정'] + column_group_out]
         df_in_list.append(df_filtered)
 
     else:
         errors.append(f"처리 대상 아님: {uploaded_file.name} (입출고용 키 컬럼 없음)")
         continue
 
-# … (후단부: final_df 결합, 엑셀 저장 등) …
-
+# … (후략) …
 
 
 # 오류가 있었으면 화면에 출력
