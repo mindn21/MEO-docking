@@ -141,7 +141,8 @@ for uploaded_file in uploaded_files:
     if is_out_file:
         # --- 출고 처리 ---
         df_filtered = df[df['구분'].isin(["정상출고", "(-)조정"])].copy()
-        df_filtered = df_filtered[column_group_out]  # column_group_out 중 실제 존재하는 것만 우선 가져옴
+        existing_cols = [c for c in column_group_out if c in df_filtered.columns]
+        df_filtered = df_filtered[existing_cols]  # column_group_out 중 실제 존재하는 것만 우선 가져옴
         df_filtered['출고일'] = pd.to_datetime(
             df_filtered['출고일'], errors='coerce'
         ).dt.strftime('%Y-%m-%d')
@@ -168,7 +169,8 @@ for uploaded_file in uploaded_files:
     elif is_in_file:
         # --- 입고 처리 ---
         df_filtered = df[df['구분'].isin(["반품입고", "정상입고", "(+)조정"])].copy()
-        df_filtered = df_filtered[column_group_in]  # column_group_in 중 실제 존재하는 것만 우선 가져옴
+        existing_cols = [c for c in column_group_in if c in df_filtered.columns]
+        df_filtered = df_filtered[existing_cols]  # column_group_in 중 실제 존재하는 것만 우선 가져옴
         df_filtered['입고일'] = pd.to_datetime(
             df_filtered['입고일'], errors='coerce'
         ).dt.strftime('%Y-%m-%d')
