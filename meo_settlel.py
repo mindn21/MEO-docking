@@ -122,6 +122,8 @@ df_out_list = []
 df_in_list = []
 errors = []
 
+# … (상단 생략) …
+
 for uploaded_file in uploaded_files:
     try:
         df = pd.read_excel(uploaded_file)
@@ -129,54 +131,64 @@ for uploaded_file in uploaded_files:
         errors.append(f"파일 읽기 실패: {uploaded_file.name} ({e})")
         continue
 
-    # 맨 마지막 행 삭제 (원본 코드에서 필요한 경우)
-    if len(df) > 0:
-        df = df.iloc[:-1]
+    # 헤더 공백 제거
+    df.columns = df.columns.str.strip()
 
-    # 출고 파일 판별 & 처리
-    if '출고일' in df.columns:
+    # 디버깅용: 컬럼 리스트 확인 (필요 시)
+    st.write(f"--- {uploaded_file.name}의 컬럼 리스트 ---")
+    st.write(df.columns.tolist())
+
+    # --- 출고/입고 판별 ---
+    is_out_file = '출고일' in df.columns
+    is_in_file = '입고일' in df.columns
+
+    if is_out_file:
+        # 출고 파일 처리 (기존 로직과 동일, 생략)
         df_filtered = df[df['구분'].isin(["정상출고", "(-)조정"])].copy()
-        df_filtered = df_filtered[column_group_out]
-        df_filtered['출고일'] = pd.to_datetime(
-            df_filtered['출고일'], errors='coerce'
-        ).dt.strftime('%Y-%m-%d')
-        df_filtered.insert(0, '분류제안', '')
-        df_filtered.insert(1, '분류확정', '')
-        df_filtered['분류제안'] = df_filtered.apply(
-            lambda row: classify(row, market_sales_list), axis=1
-        )
-        df_filtered = df_filtered[df_filtered['분류제안'].notna()]
+        # … (생략) …
         df_out_list.append(df_filtered)
 
-    # 입고 파일 판별 & 처리
-    elif '입고일' in df.columns:
-        df_filtered = df[df['구분'].isin(["반품입고", "정상입고", "(+)조정"])].copy()
-        df_filtered = df_filtered[column_group_in]
+    elif is_in_file:
+        # 입고 파일 처리: 실제 존재하는 컬럼만 골라서 가져오기
+        existing_in_cols = [col for col in column_group_in if col in df.columns]
+        df_filtered = df[existing_in_cols].copy()
         df_filtered['입고일'] = pd.to_datetime(
             df_filtered['입고일'], errors='coerce'
         ).dt.strftime('%Y-%m-%d')
+
+        # 빈 컬럼 채우기
+        for col in column_group_in:
+            if col not in df_filtered.columns:
+                df_filtered[col] = ""
+
         df_filtered.insert(0, '분류제안', '')
         df_filtered.insert(1, '분류확정', '')
+
+        # 컬럼명 재매핑
         rename_dict = {
-            "입고일": "출고일",
-            "공급처": "판매처",
-            "가용입고수량": "가용출고수량",
+            "입고일": "출고일", 
+            "공급처": "판매처", 
+            "가용입고수량": "가용출고수량", 
             "옵션명": "판매처옵션명"
         }
         df_filtered.rename(columns=rename_dict, inplace=True)
-        missing_cols = [col for col in column_group_out if col not in df_filtered.columns]
-        for col in missing_cols:
-            df_filtered[col] = ""
+
+        # 분류 함수 적용
         df_filtered['분류제안'] = df_filtered.apply(
             lambda row: classify(row, market_sales_list), axis=1
         )
         df_filtered = df_filtered[df_filtered['분류제안'].notna()]
+
+        # 최종 컬럼 순서 맞추기
         df_filtered = df_filtered[['분류제안', '분류확정'] + column_group_out]
         df_in_list.append(df_filtered)
 
     else:
-        errors.append(f"처리 대상 아님: {uploaded_file.name}")
+        errors.append(f"처리 대상 아님: {uploaded_file.name} (입출고용 키 컬럼 없음)")
         continue
+
+# … (후략) …
+
 
 # 오류가 있었으면 화면에 출력
 if errors:
