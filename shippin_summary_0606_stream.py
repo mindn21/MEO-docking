@@ -18,6 +18,8 @@ column_group_in = [
     "박스수량", "보관장소", "바코드번호", "제조일"
 ]
 
+#여기에 코드 수정함 음하하하
+
 # 업로드 폴더에서 엑셀 파일 찾기 (.xls, .xlsx)
 upload_folder = '업로드'
 uploaded_files = [f for f in os.listdir(upload_folder) if f.endswith('.xls') or f.endswith('.xlsx')]
