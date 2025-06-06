@@ -1,7 +1,5 @@
 import pandas as pd
 import os
-import tkinter as tk
-from tkinter import messagebox
 
 # --- 기본 설정 ---
 # 출고 파일에서 읽어올 열 목록 (기존 그대로 유지)
@@ -29,13 +27,13 @@ if len(uploaded_files) == 0:
     exit(1)
 # 여러 파일이 있어도 처리하도록 함
 
-# --- 사용자 확인 ---
-root = tk.Tk()
-root.withdraw()
-response = messagebox.askyesno("확인", "마켓 출고건들은 상품명을 정리 해 주셨나요? \n아직 안됐으면 아니요 버튼을 누르고 다시 실행 해 주세요")
-if not response:
-    print("사용자가 마켓 출고 정리를 하지 않았습니다. 프로그램을 종료합니다.")
-    exit(1)
+import streamlit as st
+
+response = st.radio("마켓 출고건들은 상품명을 정리하셨나요?", ["정리함", "아직 안함"])
+if response == "아직 안함":
+    st.warning("❗ 정리 후 다시 실행해주세요.")
+    st.stop()
+
 
 # --- 마켓 상품명 파일 읽기 ---
 market_sales_file_path = '마켓 상품명.xlsx'
