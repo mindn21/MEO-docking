@@ -133,6 +133,10 @@ for uploaded_file in uploaded_files:
 
     df.columns = df.columns.str.strip()  # 헤더 공백 제거
 
+    # '가용입고' 또는 '가용입고수량' 둘 중 어떤 이름이든 처리
+    if '가용입고' in df.columns and '가용입고수량' not in df.columns:
+        df.rename(columns={'가용입고': '가용입고수량'}, inplace=True)
+
     # 출고 파일 판별
     is_out_file = '출고일' in df.columns
     # 입고 파일 판별
