@@ -5,7 +5,7 @@ import pandas as pd
 import streamlit as st
 
 st.set_page_config(page_title="엑셀 입출고 분류기", layout="centered")
-st.title("📦 엑셀 입출고 자동 분류기 (Streamlit 버전)")
+st.title("📦 정산용 입출고 내역 자동 분류기")
 
 # --- 1. 업로드 UI 정의 ---
 st.write("### 1) 마켓 상품명 파일 업로드")
